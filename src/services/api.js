@@ -1,4 +1,7 @@
-const BASE = "http://127.0.0.1:5000/api";
+// Em produção (Vercel), defina VITE_API_URL nas Environment Variables do
+// projeto, por exemplo: https://api.seudominio.com.br/api
+// Em desenvolvimento local, sem nada definido, cai no Flask local.
+const BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000/api";
 
 async function req(rota, opcoes = {}) {
   const resposta = await fetch(`${BASE}${rota}`, {
