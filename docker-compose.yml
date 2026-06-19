@@ -1,0 +1,40 @@
+services:
+  db:
+    image: mysql:8.4
+    container_name: connectea_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./connectea-backend/schema_mysql.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    # Não publicamos porta para o host: só a rede interna do compose acessa o MySQL.
+
+  api:
+    build: ./connectea-backend
+    container_name: connectea_api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+    ports:
+      # Exposta só em localhost: o Nginx do host é que fica público (80/443)
+      - "127.0.0.1:8000:8000"
+
+volumes:
+  db_data:
