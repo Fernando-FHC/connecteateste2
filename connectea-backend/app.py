@@ -1,60 +1,25 @@
-import os
+import sqlite3
 import json
 from datetime import date
-from contextlib import contextmanager
-
-import pymysql
-import pymysql.cursors
 from flask import Flask, request, jsonify
-from flask_cors import CORS
-from dotenv import load_dotenv
-
-load_dotenv()  # procura um arquivo .env na pasta atual ou em pastas acima
 
 app = Flask(__name__)
+DB_PATH = "connectea.db"
 
 
-# ── CORS ──────────────────────────────────────────────────────
-# Domínios autorizados a chamar a API, separados por vírgula.
-# Em produção: defina ALLOWED_ORIGINS no .env com o domínio do Vercel.
-_origens_env = os.environ.get(
-    "ALLOWED_ORIGINS",
-    "https://connec-tea.vercel.app,http://localhost:5173",
-)
-ALLOWED_ORIGINS = [o.strip() for o in _origens_env.split(",") if o.strip()]
-
-CORS(app, resources={r"/api/*": {"origins": ALLOWED_ORIGINS}})
-
-
-# ── Classe de conexão (MySQL) ────────────────────────────────
+# ── Classe de conexão ─────────────────────────────────────────
 class Database:
-    def __init__(self):
-        self.config = dict(
-            host=os.environ.get("DB_HOST", "localhost"),
-            port=int(os.environ.get("DB_PORT", "3306")),
-            user=os.environ.get("DB_USER", "root"),
-            password=os.environ.get("DB_PASSWORD", ""),
-            database=os.environ.get("DB_NAME", "connectea"),
-            cursorclass=pymysql.cursors.DictCursor,
-            autocommit=False,
-            charset="utf8mb4",
-        )
+    def __init__(self, path=DB_PATH):
+        self.path = path
 
-    @contextmanager
     def conectar(self):
-        conn = pymysql.connect(**self.config)
-        try:
-            yield conn
-        finally:
-            conn.close()
-
-    def executar(self, conn, sql, params=None):
-        cur = conn.cursor()
-        cur.execute(sql, params or ())
-        return cur
+        conn = sqlite3.connect(self.path)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON")
+        return conn
 
     def linhas(self, cursor):
-        return cursor.fetchall()
+        return [dict(row) for row in cursor.fetchall()]
 
 
 db = Database()
@@ -71,24 +36,21 @@ class Responsavel:
     def criar(self, nome_completo, email, senha, data_aceite, telefone_contato=None):
         with db.conectar() as conn:
             try:
-                cur = db.executar(
-                    conn,
+                cur = conn.execute(
                     """INSERT INTO RESPONSAVEL
                        (Nome_Completo, Email, Senha, Data_Aceite, Telefone_Contato)
-                       VALUES (%s, %s, %s, %s, %s)""",
+                       VALUES (?, ?, ?, ?, ?)""",
                     (nome_completo, email, senha, data_aceite, telefone_contato),
                 )
                 conn.commit()
                 return {"id_responsavel": cur.lastrowid, "mensagem": "Responsável cadastrado"}, 201
-            except pymysql.err.IntegrityError:
-                conn.rollback()
+            except sqlite3.IntegrityError:
                 return {"erro": "E-mail já cadastrado"}, 409
 
     def listar(self):
         with db.conectar() as conn:
-            cur = db.executar(
-                conn,
-                "SELECT ID_Responsavel, Nome_Completo, Email, Data_Aceite, Telefone_Contato FROM RESPONSAVEL",
+            cur = conn.execute(
+                "SELECT ID_Responsavel, Nome_Completo, Email, Data_Aceite, Telefone_Contato FROM RESPONSAVEL"
             )
             return db.linhas(cur), 200
 
@@ -97,27 +59,24 @@ class Responsavel:
 class PessoaTEA:
     def criar(self, dados):
         with db.conectar() as conn:
-            cur = db.executar(
-                conn,
+            cur = conn.execute(
                 """INSERT INTO PESSOA_TEA
                    (Nome_Completo, Data_Nascimento, Sexo, Bairro, Grau_Parentesco, ID_Responsavel)
-                   VALUES (%s, %s, %s, %s, %s, %s)""",
+                   VALUES (?, ?, ?, ?, ?, ?)""",
                 (dados["nome_completo"], dados["data_nascimento"], dados["sexo"],
                  dados["bairro"], dados["grau_parentesco"], dados["id_responsavel"]),
             )
             id_pessoa = cur.lastrowid
 
-            db.executar(
-                conn,
+            conn.execute(
                 """INSERT INTO PERFIL_CLINICO
                    (ID_Pessoa, Idade_Diagnostico, Nivel_Suporte, Medicacoes_Continuas)
-                   VALUES (%s, %s, %s, %s)""",
+                   VALUES (?, ?, ?, ?)""",
                 (id_pessoa, dados["idade_diagnostico"], dados["nivel_suporte"],
                  dados.get("medicacoes_continuas")),
             )
 
-            db.executar(
-                conn,
+            conn.execute(
                 """INSERT INTO PERFIL_CENSO
                    (ID_Pessoa,
                     Renda_Familiar, Num_Moradores, Beneficio_Governo, Situacao_Moradia,
@@ -125,7 +84,7 @@ class PessoaTEA:
                     Plano_Saude, Lista_Espera, Comorbidades, Rede_Apoio,
                     Sensibilidade_Sensorial, Rotina_Sono, Seletividade_Alimentar,
                     Comunicacao, Interacao_Social, Observacoes)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (id_pessoa,
                  dados.get("renda_familiar"), dados.get("num_moradores"),
                  dados.get("beneficio_governo"), dados.get("situacao_moradia"),
@@ -143,7 +102,7 @@ class PessoaTEA:
 
     def listar(self):
         with db.conectar() as conn:
-            cur = db.executar(conn, """
+            cur = conn.execute("""
                 SELECT p.*, pc.Idade_Diagnostico, pc.Nivel_Suporte, pc.Medicacoes_Continuas
                 FROM PESSOA_TEA p
                 LEFT JOIN PERFIL_CLINICO pc ON pc.ID_Pessoa = p.ID_Pessoa
@@ -152,7 +111,7 @@ class PessoaTEA:
 
     def obter(self, id_pessoa):
         with db.conectar() as conn:
-            cur = db.executar(conn, """
+            cur = conn.execute("""
                 SELECT p.*, pc.Idade_Diagnostico, pc.Nivel_Suporte, pc.Medicacoes_Continuas,
                        ce.Renda_Familiar, ce.Num_Moradores, ce.Beneficio_Governo,
                        ce.Situacao_Moradia, ce.Nivel_Escolaridade, ce.Tipo_Escola,
@@ -160,7 +119,7 @@ class PessoaTEA:
                 FROM PESSOA_TEA p
                 LEFT JOIN PERFIL_CLINICO pc ON pc.ID_Pessoa = p.ID_Pessoa
                 LEFT JOIN PERFIL_CENSO   ce ON ce.ID_Pessoa = p.ID_Pessoa
-                WHERE p.ID_Pessoa = %s
+                WHERE p.ID_Pessoa = ?
             """, (id_pessoa,))
             rows = db.linhas(cur)
             if not rows:
@@ -172,9 +131,8 @@ class PessoaTEA:
 class ProfissionalSaude:
     def criar(self, nome, especialidade, telefone=None):
         with db.conectar() as conn:
-            cur = db.executar(
-                conn,
-                "INSERT INTO PROFISSIONAL_SAUDE (Nome_Profissional, Especialidade, Telefone) VALUES (%s, %s, %s)",
+            cur = conn.execute(
+                "INSERT INTO PROFISSIONAL_SAUDE (Nome_Profissional, Especialidade, Telefone) VALUES (?, ?, ?)",
                 (nome, especialidade, telefone),
             )
             conn.commit()
@@ -182,7 +140,7 @@ class ProfissionalSaude:
 
     def listar(self):
         with db.conectar() as conn:
-            cur = db.executar(conn, "SELECT * FROM PROFISSIONAL_SAUDE ORDER BY Nome_Profissional")
+            cur = conn.execute("SELECT * FROM PROFISSIONAL_SAUDE ORDER BY Nome_Profissional")
             return db.linhas(cur), 200
 
 
@@ -190,10 +148,9 @@ class ProfissionalSaude:
 class Acompanhamento:
     def criar(self, id_pessoa, id_profissional, data_inicio):
         with db.conectar() as conn:
-            db.executar(
-                conn,
+            conn.execute(
                 """INSERT INTO ACOMPANHAMENTO (ID_Pessoa, ID_Profissional, Data_Inicio_Tratamento)
-                   VALUES (%s, %s, %s)""",
+                   VALUES (?, ?, ?)""",
                 (id_pessoa, id_profissional, data_inicio),
             )
             conn.commit()
@@ -201,11 +158,11 @@ class Acompanhamento:
 
     def listar_por_pessoa(self, id_pessoa):
         with db.conectar() as conn:
-            cur = db.executar(conn, """
+            cur = conn.execute("""
                 SELECT a.*, ps.Nome_Profissional, ps.Especialidade, ps.Telefone
                 FROM ACOMPANHAMENTO a
                 JOIN PROFISSIONAL_SAUDE ps ON ps.ID_Profissional = a.ID_Profissional
-                WHERE a.ID_Pessoa = %s
+                WHERE a.ID_Pessoa = ?
             """, (id_pessoa,))
             return db.linhas(cur), 200
 
@@ -217,10 +174,17 @@ profissional    = ProfissionalSaude()
 acompanhamento  = Acompanhamento()
 
 
-# ── Healthcheck (usado pelo monitoramento / Docker) ───────────
-@app.route("/api/health", methods=["GET"])
-def health():
-    return jsonify({"status": "ok"}), 200
+# ── CORS ──────────────────────────────────────────────────────
+@app.after_request
+def cors(response):
+    response.headers["Access-Control-Allow-Origin"]  = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    return response
+
+@app.route("/api/<path:p>", methods=["OPTIONS"])
+def preflight(_):
+    return "", 204
 
 
 # ── Rotas Responsável ─────────────────────────────────────────
@@ -228,9 +192,8 @@ def health():
 def login():
     d = request.get_json()
     with db.conectar() as conn:
-        cur = db.executar(
-            conn,
-            "SELECT ID_Responsavel FROM RESPONSAVEL WHERE Email = %s AND Senha = %s",
+        cur = conn.execute(
+            "SELECT ID_Responsavel FROM RESPONSAVEL WHERE Email = ? AND Senha = ?",
             (d["email"], d["senha"]),
         )
         row = cur.fetchone()
@@ -312,20 +275,20 @@ def listar_acompanhamentos(id_pessoa):
 @app.route("/api/dados", methods=["GET"])
 def dados_dashboard():
     with db.conectar() as conn:
-        responsaveis = db.linhas(db.executar(
-            conn, "SELECT ID_Responsavel, Nome_Completo, Email, Data_Aceite, Telefone_Contato FROM RESPONSAVEL"
+        responsaveis = db.linhas(conn.execute(
+            "SELECT ID_Responsavel, Nome_Completo, Email, Data_Aceite, Telefone_Contato FROM RESPONSAVEL"
         ))
-        pessoas = db.linhas(db.executar(conn, """
+        pessoas = db.linhas(conn.execute("""
             SELECT p.ID_Pessoa, p.Nome_Completo, p.Data_Nascimento, p.Sexo,
                    p.Bairro, p.Grau_Parentesco,
                    pc.Nivel_Suporte, pc.Idade_Diagnostico
             FROM PESSOA_TEA p
             LEFT JOIN PERFIL_CLINICO pc ON pc.ID_Pessoa = p.ID_Pessoa
         """))
-        profissionais = db.linhas(db.executar(
-            conn, "SELECT * FROM PROFISSIONAL_SAUDE ORDER BY Nome_Profissional"
+        profissionais = db.linhas(conn.execute(
+            "SELECT * FROM PROFISSIONAL_SAUDE ORDER BY Nome_Profissional"
         ))
-        acompanhamentos = db.linhas(db.executar(conn, """
+        acompanhamentos = db.linhas(conn.execute("""
             SELECT a.ID_Pessoa, a.ID_Profissional, a.Data_Inicio_Tratamento,
                    p.Nome_Completo, ps.Nome_Profissional, ps.Especialidade
             FROM ACOMPANHAMENTO a
@@ -346,8 +309,4 @@ def dados_dashboard():
 
 # ════════════════════════════════════════════════════════════
 if __name__ == "__main__":
-    app.run(
-        debug=os.environ.get("FLASK_DEBUG", "0") == "1",
-        port=int(os.environ.get("PORT", "5000")),
-        host="0.0.0.0",
-    )
+    app.run(debug=True, port=5000, host="0.0.0.0")
