@@ -1,0 +1,429 @@
+.dash-root {
+  /* tema claro*/
+  --dash-bg: #f4f6f8;
+  --dash-card: #ffffff;
+  --dash-border: #e2e8f0;
+  --dash-text: #1e293b;
+  --dash-muted: #64748b;
+  --dash-accent: #16a34a;
+  --dash-grid: #eef2f6;
+
+  background: var(--dash-bg);
+  color: var(--dash-text);
+  min-height: 100vh;
+  padding: 24px;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  transition: background 0.2s, color 0.2s;
+}
+
+.dash-root.tema-escuro {
+  --dash-bg: #0c0d0e;
+  --dash-card: #161819;
+  --dash-border: #2a2d2f;
+  --dash-text: #e5e7eb;
+  --dash-muted: #9ca3af;
+  --dash-accent: #34d399;
+  --dash-grid: #23262a;
+}
+
+.dash-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.dash-header h1 {
+  font-size: 1.5rem;
+  margin: 0 0 4px;
+  font-weight: 700;
+  color: var(--dash-accent);
+}
+
+.dash-header p {
+  margin: 0;
+  color: var(--dash-muted);
+  font-size: 0.9rem;
+}
+
+.dash-tema-btn {
+  flex-shrink: 0;
+  background: var(--dash-card);
+  color: var(--dash-text);
+  border: 1px solid var(--dash-border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.dash-tema-btn:hover {
+  border-color: var(--dash-accent);
+}
+
+.dash-sep {
+  border: none;
+  border-top: 1px solid var(--dash-border);
+  margin: 16px 0 24px;
+}
+
+.dash-status {
+  color: var(--dash-muted);
+  padding: 40px 0;
+  text-align: center;
+}
+
+.dash-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.dash-kpi {
+  background: var(--dash-card);
+  border: 1px solid var(--dash-border);
+  border-radius: 10px;
+  padding: 18px 20px;
+}
+
+.dash-kpi-topo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--dash-muted);
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+}
+
+.dash-kpi-topo svg {
+  color: var(--dash-accent);
+  flex-shrink: 0;
+}
+
+.dash-kpi .valor {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--dash-accent);
+}
+
+.dash-kpi .sub {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: var(--dash-muted);
+}
+
+/* Grid de graficos */
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 16px;
+}
+
+.dash-card {
+  background: var(--dash-card);
+  border: 1px solid var(--dash-border);
+  border-radius: 10px;
+  padding: 18px 20px 8px;
+}
+
+.dash-card h3 {
+  margin: 0 0 16px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--dash-text);
+}
+
+.dash-card .vazio {
+  color: var(--dash-muted);
+  font-size: 0.85rem;
+  padding: 40px 0;
+  text-align: center;
+}
+
+/* ── Layout com sidebar ──────────────────────────────── */
+.dash-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.dash-sidebar {
+  position: sticky;
+  top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--dash-card);
+  border: 1px solid var(--dash-border);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.dash-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  color: var(--dash-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.dash-nav-item:hover {
+  background: color-mix(in srgb, var(--dash-accent) 10%, transparent);
+  color: var(--dash-text);
+}
+
+.dash-nav-item.ativo {
+  background: color-mix(in srgb, var(--dash-accent) 16%, transparent);
+  color: var(--dash-accent);
+  font-weight: 600;
+}
+
+.dash-nav-item svg { flex-shrink: 0; }
+
+.dash-conteudo { min-width: 0; }
+
+@media (max-width: 820px) {
+  .dash-layout { grid-template-columns: 1fr; }
+  .dash-sidebar {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    overflow-x: auto;
+  }
+  .dash-nav-item { width: auto; }
+}
+
+/* ── Feedback ────────────────────────────────────────── */
+.dash-feedback {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-bottom: 16px;
+  border: 1px solid;
+}
+.dash-feedback.ok {
+  background: color-mix(in srgb, #16a34a 12%, transparent);
+  border-color: #16a34a;
+  color: #16a34a;
+}
+.dash-feedback.erro {
+  background: color-mix(in srgb, #dc2626 12%, transparent);
+  border-color: #dc2626;
+  color: #dc2626;
+}
+
+/* ── Seções de tabela ────────────────────────────────── */
+.dash-secao {
+  background: var(--dash-card);
+  border: 1px solid var(--dash-border);
+  border-radius: 10px;
+  padding: 18px 20px;
+}
+
+.dash-secao-cabecalho {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.dash-secao-cabecalho h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.dash-contagem {
+  background: color-mix(in srgb, var(--dash-accent) 16%, transparent);
+  color: var(--dash-accent);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+
+.dash-vazio {
+  color: var(--dash-muted);
+  font-size: 0.85rem;
+  padding: 24px 0;
+  text-align: center;
+}
+
+.dash-tabela-wrap { overflow-x: auto; }
+
+.dash-tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.dash-tabela th,
+.dash-tabela td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--dash-border);
+  white-space: nowrap;
+}
+
+.dash-tabela th {
+  color: var(--dash-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+}
+
+.dash-tabela tbody tr:hover {
+  background: color-mix(in srgb, var(--dash-accent) 6%, transparent);
+}
+
+.dash-tabela .col-acoes { width: 1%; text-align: right; }
+
+.dash-acoes {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.dash-btn-icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: 1px solid var(--dash-border);
+  background: transparent;
+  color: var(--dash-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.dash-btn-icone.editar:hover { color: var(--dash-accent); border-color: var(--dash-accent); }
+.dash-btn-icone.excluir:hover { color: #dc2626; border-color: #dc2626; }
+
+/* ── Sugestões ───────────────────────────────────────── */
+.dash-sugestoes {
+  display: grid;
+  gap: 12px;
+}
+
+.dash-sugestao {
+  border: 1px solid var(--dash-border);
+  border-left: 3px solid var(--dash-accent);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.dash-sugestao-autor {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--dash-accent);
+  margin-bottom: 4px;
+}
+
+.dash-sugestao-texto {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--dash-text);
+  white-space: pre-wrap;
+}
+
+/* ── Modal de edição ─────────────────────────────────── */
+.dash-modal-fundo {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1000;
+}
+
+.dash-modal {
+  background: var(--dash-card);
+  color: var(--dash-text);
+  border: 1px solid var(--dash-border);
+  border-radius: 12px;
+  padding: 22px 24px;
+  width: 100%;
+  max-width: 440px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.dash-modal h3 {
+  margin: 0 0 18px;
+  font-size: 1.1rem;
+}
+
+.dash-campo {
+  margin-bottom: 14px;
+}
+
+.dash-campo label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--dash-muted);
+  margin-bottom: 5px;
+}
+
+.dash-campo input,
+.dash-campo select {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--dash-border);
+  border-radius: 8px;
+  background: var(--dash-bg);
+  color: var(--dash-text);
+  font-size: 0.9rem;
+  box-sizing: border-box;
+}
+
+.dash-campo input:focus,
+.dash-campo select:focus {
+  outline: none;
+  border-color: var(--dash-accent);
+}
+
+.dash-modal-acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.dash-btn {
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border: 1px solid var(--dash-border);
+}
+
+.dash-btn.primario {
+  background: var(--dash-accent);
+  border-color: var(--dash-accent);
+  color: #fff;
+}
+.dash-btn.primario:disabled { opacity: 0.6; cursor: default; }
+
+.dash-btn.secundario {
+  background: transparent;
+  color: var(--dash-text);
+}
