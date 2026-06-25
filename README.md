@@ -27,7 +27,7 @@ ConnecTea-main/
 └── src/                    # Frontend React
     ├── components/
     │   ├── layout/         # Header e Footer
-    │   └── pages/          # Home, Login, Cadastro, Dados, Políticas
+    │   └── pages/          # Home, Login, Cadastro, Dashboard, Políticas
     ├── services/api.js     # Integração com a API Flask
     └── routes/             # Configuração de rotas
 ```
@@ -89,7 +89,7 @@ Acesse `http://localhost:5173` no navegador.
 | `/` | Página inicial (landing page) |
 | `/login` | Login e cadastro de responsável |
 | `/formulario` | Formulário do censo (7 etapas) |
-| `/dados` | Dashboard com as 4 tabelas do banco |
+| `/dashboard` | Dashboard com as 4 tabelas do banco |
 | `/politica-privacidade` | Política de privacidade (LGPD) |
 | `/termos-de-uso` | Termos de uso |
 
