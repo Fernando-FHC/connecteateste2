@@ -1,6 +1,3 @@
-# Migração não-destrutiva: adiciona Nome_Completo e Telefone_Contato à
-# tabela RESPONSAVEL preservando os registros existentes.
-# Execute uma única vez: python migrar_responsavel.py
 import sqlite3
 
 conn = sqlite3.connect("connectea.db")

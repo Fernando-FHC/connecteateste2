@@ -1,12 +1,5 @@
--- ConnecTea – schema SQLite3
--- Execute: python criar_banco.py
--- SQLite aceita os tipos abaixo e os mapeia para suas classes internas:
---   VARCHAR(n) → TEXT  |  DATE → TEXT (ISO 8601)  |  BOOLEAN → INTEGER (0/1)
---   REAL → REAL        |  INTEGER → INTEGER
-
 PRAGMA foreign_keys = ON;
 
--- ── 1. RESPONSAVEL ────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS RESPONSAVEL (
     ID_Responsavel    INTEGER      PRIMARY KEY AUTOINCREMENT,
     Nome_Completo     VARCHAR(150) NOT NULL,
@@ -16,7 +9,6 @@ CREATE TABLE IF NOT EXISTS RESPONSAVEL (
     Telefone_Contato  VARCHAR(20)
 );
 
--- ── 2. PESSOA_TEA ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS PESSOA_TEA (
     ID_Pessoa        INTEGER      PRIMARY KEY AUTOINCREMENT,
     Nome_Completo    VARCHAR(150) NOT NULL,
@@ -28,7 +20,6 @@ CREATE TABLE IF NOT EXISTS PESSOA_TEA (
     FOREIGN KEY (ID_Responsavel) REFERENCES RESPONSAVEL(ID_Responsavel)
 );
 
--- ── 3. PERFIL_CLINICO (1:1 com PESSOA_TEA) ───────────────────
 CREATE TABLE IF NOT EXISTS PERFIL_CLINICO (
     ID_Pessoa            INTEGER     PRIMARY KEY,
     Idade_Diagnostico    INTEGER     NOT NULL,
@@ -37,7 +28,6 @@ CREATE TABLE IF NOT EXISTS PERFIL_CLINICO (
     FOREIGN KEY (ID_Pessoa) REFERENCES PESSOA_TEA(ID_Pessoa)
 );
 
--- PERFIL_CENSO 
 CREATE TABLE IF NOT EXISTS PERFIL_CENSO (
     ID_Pessoa               INTEGER     PRIMARY KEY,
     Renda_Familiar          VARCHAR(50),
@@ -61,7 +51,6 @@ CREATE TABLE IF NOT EXISTS PERFIL_CENSO (
     FOREIGN KEY (ID_Pessoa) REFERENCES PESSOA_TEA(ID_Pessoa)
 );
 
--- ── 5. PROFISSIONAL_SAUDE ─────────────────────────────────────
 CREATE TABLE IF NOT EXISTS PROFISSIONAL_SAUDE (
     ID_Profissional   INTEGER      PRIMARY KEY AUTOINCREMENT,
     Nome_Profissional VARCHAR(150) NOT NULL,
@@ -69,7 +58,6 @@ CREATE TABLE IF NOT EXISTS PROFISSIONAL_SAUDE (
     Telefone          VARCHAR(20)
 );
 
--- ── 6. ACOMPANHAMENTO (N:N entre PESSOA_TEA e PROFISSIONAL) ──
 CREATE TABLE IF NOT EXISTS ACOMPANHAMENTO (
     ID_Pessoa              INTEGER NOT NULL,
     ID_Profissional        INTEGER NOT NULL,

@@ -7,7 +7,6 @@ app = Flask(__name__)
 DB_PATH = "connectea.db"
 
 
-# ── Classe de conexão ─────────────────────────────────────────
 class Database:
     def __init__(self, path=DB_PATH):
         self.path = path
@@ -31,7 +30,6 @@ def serializar(obj):
     raise TypeError
 
 
-# ── Classe Responsavel ────────────────────────────────────────
 class Responsavel:
     def criar(self, nome_completo, email, senha, data_aceite, telefone_contato=None):
         with db.conectar() as conn:
@@ -54,8 +52,36 @@ class Responsavel:
             )
             return db.linhas(cur), 200
 
+    def atualizar(self, id_responsavel, d):
+        with db.conectar() as conn:
+            try:
+                cur = conn.execute(
+                    """UPDATE RESPONSAVEL
+                       SET Nome_Completo = ?, Email = ?, Telefone_Contato = ?
+                       WHERE ID_Responsavel = ?""",
+                    (d["nome_completo"], d["email"], d.get("telefone_contato"), id_responsavel),
+                )
+                conn.commit()
+            except sqlite3.IntegrityError:
+                return {"erro": "E-mail já cadastrado"}, 409
+            if cur.rowcount == 0:
+                return {"erro": "Não encontrado"}, 404
+            return {"mensagem": "Responsável atualizado"}, 200
 
-# ── Classe PessoaTEA ──────────────────────────────────────────
+    def excluir(self, id_responsavel):
+        with db.conectar() as conn:
+            dep = conn.execute(
+                "SELECT COUNT(*) AS n FROM PESSOA_TEA WHERE ID_Responsavel = ?", (id_responsavel,)
+            ).fetchone()["n"]
+            if dep > 0:
+                return {"erro": f"Possui {dep} pessoa(s) vinculada(s). Exclua-as primeiro."}, 409
+            cur = conn.execute("DELETE FROM RESPONSAVEL WHERE ID_Responsavel = ?", (id_responsavel,))
+            conn.commit()
+            if cur.rowcount == 0:
+                return {"erro": "Não encontrado"}, 404
+            return {"mensagem": "Responsável excluído"}, 200
+
+
 class PessoaTEA:
     def criar(self, dados):
         with db.conectar() as conn:
@@ -126,8 +152,42 @@ class PessoaTEA:
                 return {"erro": "Não encontrado"}, 404
             return rows[0], 200
 
+    def atualizar(self, id_pessoa, d):
+        with db.conectar() as conn:
+            cur = conn.execute(
+                """UPDATE PESSOA_TEA
+                   SET Nome_Completo = ?, Data_Nascimento = ?, Sexo = ?,
+                       Bairro = ?, Grau_Parentesco = ?
+                   WHERE ID_Pessoa = ?""",
+                (d["nome_completo"], d["data_nascimento"], d["sexo"],
+                 d["bairro"], d["grau_parentesco"], id_pessoa),
+            )
+            if cur.rowcount == 0:
+                return {"erro": "Não encontrado"}, 404
+            # Atualiza o perfil clínico
+            conn.execute(
+                """INSERT INTO PERFIL_CLINICO (ID_Pessoa, Idade_Diagnostico, Nivel_Suporte)
+                   VALUES (?, ?, ?)
+                   ON CONFLICT(ID_Pessoa) DO UPDATE SET
+                       Idade_Diagnostico = excluded.Idade_Diagnostico,
+                       Nivel_Suporte     = excluded.Nivel_Suporte""",
+                (id_pessoa, d.get("idade_diagnostico"), d.get("nivel_suporte")),
+            )
+            conn.commit()
+            return {"mensagem": "Pessoa atualizada"}, 200
 
-# ── Classe ProfissionalSaude ──────────────────────────────────
+    def excluir(self, id_pessoa):
+        with db.conectar() as conn:
+            conn.execute("DELETE FROM ACOMPANHAMENTO WHERE ID_Pessoa = ?", (id_pessoa,))
+            conn.execute("DELETE FROM PERFIL_CLINICO WHERE ID_Pessoa = ?", (id_pessoa,))
+            conn.execute("DELETE FROM PERFIL_CENSO   WHERE ID_Pessoa = ?", (id_pessoa,))
+            cur = conn.execute("DELETE FROM PESSOA_TEA WHERE ID_Pessoa = ?", (id_pessoa,))
+            conn.commit()
+            if cur.rowcount == 0:
+                return {"erro": "Não encontrado"}, 404
+            return {"mensagem": "Pessoa excluída"}, 200
+
+
 class ProfissionalSaude:
     def criar(self, nome, especialidade, telefone=None):
         with db.conectar() as conn:
@@ -143,8 +203,30 @@ class ProfissionalSaude:
             cur = conn.execute("SELECT * FROM PROFISSIONAL_SAUDE ORDER BY Nome_Profissional")
             return db.linhas(cur), 200
 
+    def atualizar(self, id_profissional, nome, especialidade, telefone=None):
+        with db.conectar() as conn:
+            cur = conn.execute(
+                """UPDATE PROFISSIONAL_SAUDE
+                   SET Nome_Profissional = ?, Especialidade = ?, Telefone = ?
+                   WHERE ID_Profissional = ?""",
+                (nome, especialidade, telefone, id_profissional),
+            )
+            conn.commit()
+            if cur.rowcount == 0:
+                return {"erro": "Não encontrado"}, 404
+            return {"mensagem": "Profissional atualizado"}, 200
 
-# ── Classe Acompanhamento ─────────────────────────────────────
+    def excluir(self, id_profissional):
+        with db.conectar() as conn:
+            conn.execute("DELETE FROM ACOMPANHAMENTO WHERE ID_Profissional = ?", (id_profissional,))
+            cur = conn.execute("DELETE FROM PROFISSIONAL_SAUDE WHERE ID_Profissional = ?", (id_profissional,))
+            conn.commit()
+            if cur.rowcount == 0:
+                return {"erro": "Não encontrado"}, 404
+            return {"mensagem": "Profissional excluído"}, 200
+
+
+# acompanhamento
 class Acompanhamento:
     def criar(self, id_pessoa, id_profissional, data_inicio):
         with db.conectar() as conn:
@@ -174,12 +256,12 @@ profissional    = ProfissionalSaude()
 acompanhamento  = Acompanhamento()
 
 
-# ── CORS ──────────────────────────────────────────────────────
+# CORS 
 @app.after_request
 def cors(response):
     response.headers["Access-Control-Allow-Origin"]  = "*"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
     return response
 
 @app.route("/api/<path:p>", methods=["OPTIONS"])
@@ -187,7 +269,6 @@ def preflight(_):
     return "", 204
 
 
-# ── Rotas Responsável ─────────────────────────────────────────
 @app.route("/api/login", methods=["POST"])
 def login():
     d = request.get_json()
@@ -216,8 +297,17 @@ def listar_responsaveis():
         json.dumps(dados, default=serializar), mimetype="application/json"
     ), status
 
+@app.route("/api/responsavel/<int:id_responsavel>", methods=["PUT"])
+def atualizar_responsavel(id_responsavel):
+    dados, status = responsavel.atualizar(id_responsavel, request.get_json())
+    return jsonify(dados), status
 
-# ── Rotas Pessoa TEA ──────────────────────────────────────────
+@app.route("/api/responsavel/<int:id_responsavel>", methods=["DELETE"])
+def excluir_responsavel(id_responsavel):
+    dados, status = responsavel.excluir(id_responsavel)
+    return jsonify(dados), status
+
+
 @app.route("/api/pessoa", methods=["POST"])
 def criar_pessoa():
     d = request.get_json()
@@ -238,8 +328,17 @@ def obter_pessoa(id_pessoa):
         json.dumps(dados, default=serializar), mimetype="application/json"
     ), status
 
+@app.route("/api/pessoa/<int:id_pessoa>", methods=["PUT"])
+def atualizar_pessoa(id_pessoa):
+    dados, status = pessoa_tea.atualizar(id_pessoa, request.get_json())
+    return jsonify(dados), status
 
-# ── Rotas Profissional ────────────────────────────────────────
+@app.route("/api/pessoa/<int:id_pessoa>", methods=["DELETE"])
+def excluir_pessoa(id_pessoa):
+    dados, status = pessoa_tea.excluir(id_pessoa)
+    return jsonify(dados), status
+
+
 @app.route("/api/profissional", methods=["POST"])
 def criar_profissional():
     d = request.get_json()
@@ -253,8 +352,20 @@ def listar_profissionais():
     dados, status = profissional.listar()
     return jsonify(dados), status
 
+@app.route("/api/profissional/<int:id_profissional>", methods=["PUT"])
+def atualizar_profissional(id_profissional):
+    d = request.get_json()
+    dados, status = profissional.atualizar(
+        id_profissional, d["nome_profissional"], d["especialidade"], d.get("telefone")
+    )
+    return jsonify(dados), status
 
-# ── Rotas Acompanhamento ──────────────────────────────────────
+@app.route("/api/profissional/<int:id_profissional>", methods=["DELETE"])
+def excluir_profissional(id_profissional):
+    dados, status = profissional.excluir(id_profissional)
+    return jsonify(dados), status
+
+
 @app.route("/api/acompanhamento", methods=["POST"])
 def criar_acompanhamento():
     d = request.get_json()
@@ -271,7 +382,6 @@ def listar_acompanhamentos(id_pessoa):
     ), status
 
 
-# ── Rota de dados para o dashboard React ─────────────────────
 @app.route("/api/dados", methods=["GET"])
 def dados_dashboard():
     with db.conectar() as conn:
@@ -281,9 +391,15 @@ def dados_dashboard():
         pessoas = db.linhas(conn.execute("""
             SELECT p.ID_Pessoa, p.Nome_Completo, p.Data_Nascimento, p.Sexo,
                    p.Bairro, p.Grau_Parentesco,
-                   pc.Nivel_Suporte, pc.Idade_Diagnostico
+                   pc.Nivel_Suporte, pc.Idade_Diagnostico,
+                   ce.Renda_Familiar, ce.Num_Moradores, ce.Beneficio_Governo,
+                   ce.Situacao_Moradia, ce.Nivel_Escolaridade, ce.Tipo_Escola,
+                   ce.Mediador_Escolar, ce.Plano_Saude, ce.Rede_Apoio,
+                   ce.Rotina_Sono, ce.Seletividade_Alimentar, ce.Comunicacao,
+                   ce.Observacoes
             FROM PESSOA_TEA p
             LEFT JOIN PERFIL_CLINICO pc ON pc.ID_Pessoa = p.ID_Pessoa
+            LEFT JOIN PERFIL_CENSO   ce ON ce.ID_Pessoa = p.ID_Pessoa
         """))
         profissionais = db.linhas(conn.execute(
             "SELECT * FROM PROFISSIONAL_SAUDE ORDER BY Nome_Profissional"

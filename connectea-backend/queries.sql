@@ -1,7 +1,7 @@
---   date('now')            = CURDATE()
+--   date('now') = CURDATE()
 --   date('now', '-30 days') = CURDATE() - INTERVAL 30 DAY
 --   strftime('%m', coluna) = month(coluna)
---   julianday()            = calculo de diferenca em dias/anos
+--   julianday() = calculo de diferenca em dias/anos
 
 PRAGMA foreign_keys = ON;
 
@@ -83,7 +83,6 @@ order by Quantidade desc;
 
 
 --#11 Criancas (menos de 18 anos) em lista de espera
--- julianday() calcula diferenca em dias; dividir por 365.25 da a idade em anos
 select PESSOA_TEA.Nome_Completo, PESSOA_TEA.Data_Nascimento,
     cast((julianday('now') - julianday(PESSOA_TEA.Data_Nascimento)) / 365.25 as integer) as Idade,
     PERFIL_CENSO.Lista_Espera
